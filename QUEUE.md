@@ -190,6 +190,19 @@ Two tracks run **independently** of that path and can happen anytime:
       true global max) — pre-existing, not caused by this change, but
       platform filtering makes the empty-result case common instead of
       rare for any `platform=android`/`platform=erp` query.
+- [ ] 🟡 **German coverage is incomplete everywhere, not just the till**
+      (Farshid 2026-07-24, prompted by [[prospect-german-shop-migration]]) —
+      "add German language to everything." Audited current state: `de` exists
+      ONLY as an install-time till plugin (`ut-plugin-language-de`); it is
+      **not** one of `universal-till`'s core `web/locales/` (en/ar/fa/tr) and
+      **not** in `ut-cloud`'s marketplace-portal locale set either
+      (`locales/`: ar-SA, en-GB, en-US, es-ES, fa-IR, fr-FR, it-IT, pt-PT,
+      tr-TR — no `de-DE`, despite fr/it/pt already being covered there).
+      Emails ([[multilingual-everything]]: "emails in the user's language")
+      and `ut-website` haven't been checked yet either. NOT started — needs
+      scoping as a proper locale addition (translated strings across till
+      core + marketplace portal + transactional emails + marketing site),
+      not just leaning on the existing plugin.
 
 ### 🎨 Content & assets
 - [x] 🟡 **(field)** **Icons for all 11 plugins** — consistent SVG set embedded in the
