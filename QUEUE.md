@@ -994,9 +994,11 @@ open, and didn't)_
       fallback-to-cloud-on-timeout or self-signed-cert handling — the opposite of the
       spec'd safety net for a dev-only escape hatch. Source: 009 FR-015 (US6) / 010
       FR-004, FR-005 (T039-T041 unchecked, confirmed absent from code).
-- [ ] 🟡 **No marketplace audit-trail UI page; no permission/manager-approval
-      badges on the store page** — REVISED 2026-07-24, two corrections to how this
-      item was previously described:
+- [x] 🟡 **No marketplace audit-trail UI page; no permission/manager-approval
+      badges on the store page** — the audit-trail page is now FIXED (2026-07-24,
+      `universal-till` PR #47); the store-page badges are the one small piece
+      still open (see bottom). Three corrections to how this item was
+      originally described, in order found this session:
       1. **"Manager-PIN install gating itself does work" was false, now actually
          fixed.** `authorizer.go`'s `Authorizer`/`requireManagerPIN` was entirely
          dead code (zero callers anywhere) — every plugin install/uninstall/
@@ -1016,18 +1018,28 @@ open, and didn't)_
          and is comprehensively wired: plugin install/uninstall/trust-change
          (`internal/plugins/install.go`), permission grant/revoke
          (`permissions.go`), rollback (`rollback.go`), plus dozens of other
-         actions app-wide (sales, shifts, users, settings, sync, etc.). **Still
-         genuinely missing**: an admin-facing UI page to browse/filter that
-         table — the persistence layer was never the gap, only the viewer.
-      **Still open**: the audit-trail browse/filter page itself;
-      `plugin_settings.html` telemetry opt-in toggle (note: a *different*,
+         actions app-wide (sales, shifts, users, settings, sync, etc.). The
+         persistence layer was never the gap, only the viewer.
+      3. **The viewer is now built.** FIXED 2026-07-24, `universal-till` PR #47:
+         new manager-gated `/audit` page (entity-type/actor/action/date
+         filters, pagination), new `POSRepo.ListAudit`/`DistinctAuditEntityTypes`,
+         linked from `/reports`. Manually verified live against the real dev
+         database before review. Independent review caught a real bug pre-merge:
+         the date-only `Until` filter (what `<input type="date">` submits)
+         compared against full RFC3339 timestamps and silently excluded its
+         own end day — "Until: today" would have shown nothing from today;
+         fixed with a bare-date-to-end-of-day normalizer, regression tested.
+         Review: `universal-till/docs/code-reviews/2026-07-24-audit-trail-page.md`.
+      **Still open** (small, cosmetic): `plugins_store.html` permission/
+      manager-approval badges (trust badges — official/verified/unverified —
+      already exist; this is a distinct badge for permission scope/manager-
+      approval status, not yet built). The `plugin_settings.html` telemetry
+      opt-in toggle this item also originally mentioned is superseded — a
       till-core telemetry opt-in toggle was added 2026-07-24 in
-      `web/ui/pages/settings.html` as part of the device-telemetry fix — this
-      item is specifically about a marketplace-side badge/toggle, if that's
-      still a distinct need, worth re-checking before starting); `plugins_store
-      .html` permission/manager-approval badges (trust badges — official/
-      verified/unverified — already exist). Source: 009 FR-009 (US5) / 010
-      FR-006, FR-007, SC-002.
+      `web/ui/pages/settings.html` as part of the device-telemetry fix; if a
+      *marketplace-side* one is still wanted specifically, re-scope before
+      starting rather than assuming this covers it. Source: 009 FR-009 (US5) /
+      010 FR-006, FR-007, SC-002.
 - [x] 🟡 **Plugin marketplace telemetry never actually sends** — FIXED 2026-07-24,
       same session (`universal-till` PR #44, paired with `ut-cloud` PR #17 — see
       the `ut-cloud — spec 001-plugin-marketplace` section above for the full
