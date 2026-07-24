@@ -224,14 +224,20 @@ Two tracks run **independently** of that path and can happen anytime:
 - [ ] 🟡 **Windows regular-printing** — plain-text/CUPS-equivalent path on Windows.
 - [ ] 🟡 **Auto-update for the till app** (Farshid 2026-07-24) — a settings toggle to
       enable/disable auto-update, plus a schedule (time-of-day, presumably to avoid
-      updating mid-trading-hours). No update mechanism for the till binary itself
-      exists today (checked: no `auto.update`/scheduled-update code in
-      `universal-till/internal/`) — this is about the **core app**, distinct from
-      the already-working plugin-update flow via the marketplace. NOT started —
-      needs scoping: how the binary gets replaced per platform (systemd service
-      restart on the `.deb` install path, in-place swap on Windows/macOS/manual
-      Linux), where the update artifact comes from (same release channel as
-      `github.com/universaltill/universal-till/releases`?), and how it interacts
+      updating mid-trading-hours). **Correction to the initial note on this item**:
+      the hard parts already exist and are NOT a from-scratch build —
+      `internal/updates` (daily GitHub-release check, `Status.Available` surfaced
+      as an "update available" hint) and `internal/selfupdate` (`Apply(ctx)`:
+      downloads the release tarball/zip, verifies its SHA-256, extracts, swaps the
+      binary in place — real, working code, `Supported()` gates it per-platform)
+      both already exist and are wired to a manual "check/update now" settings
+      button. The actual gap is narrower than first described: **nothing calls
+      `selfupdate.Apply` automatically** — no toggle, no schedule, no unattended
+      trigger. NOT started — needs scoping: how the binary gets replaced per
+      platform (systemd service restart on the `.deb` install path — does
+      `selfupdate.Supported()` even cover that path today, or only the
+      manual desktop-shell case?), where the update artifact comes from (same release
+      channel as `github.com/universaltill/universal-till/releases`?), and how it interacts
       with offline-first (must never block checkout, same bar as
       [[offline-first]]-style constraints elsewhere in this repo).
 - [ ] 🟡 **Rollback the till app to a previous version** (Farshid 2026-07-24,
