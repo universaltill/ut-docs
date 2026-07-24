@@ -262,7 +262,24 @@ Two tracks run **independently** of that path and can happen anytime:
       per Farshid's explicit "backlog it, don't fix now."
 - [ ] 🟡 **(field)** **Buttons can carry icons** (Farshid 2026-07-18): tender/menu
       buttons show an icon; a plugin can ship its own icon in the manifest and it shows
-      on the plugin card AND on the button it contributes.
+      on the plugin card AND on the button it contributes. **Partially FIXED
+      2026-07-24, `universal-till` PR #50**: menu/action buttons on the sale
+      screen (`plugin_buttons.html`) now render a plugin's per-entry
+      `manifest.json` icon — the data (`plugin_entries.icon_path`) was
+      already persisted at install time but write-only until now; a new
+      guarded static route (`GET /plugin-icons/{plugin}/{version}/{file...}`,
+      same traversal-guard pattern as the existing `/themes/` route) serves
+      it. Independent review caught a real bug pre-merge (the new asset-dir
+      var wasn't repointed at the resolved data directory like its two
+      siblings, so icons would have silently 404'd on every real deployment)
+      — fixed and re-verified live. **Still open, deliberately not attempted
+      here — each needs a design decision first, not just a render fix**:
+      tender-button icons (`payment_methods`, the table backing the pay-grid,
+      has no icon column or any plumbing to one at all — new schema needed)
+      and the plugin manage-card icon on `/plugins` (`Manifest` has no
+      plugin-level icon field, only a per-entry one — "which entry's icon
+      represents the whole plugin card" needs deciding before any code).
+      Review: `universal-till/docs/code-reviews/2026-07-24-plugin-button-icons.md`.
 - [x] 🟡 **WKDownloadDelegate** — attachments / undisplayable responses / `<a download>`
       links now save to ~/Downloads with browser-style dedupe (macOS 11.3+ guarded).
       Needs a real-app click test on the next dmg.
