@@ -909,18 +909,30 @@ the gaps below are real. Not on the critical path — pick up opportunistically.
       PR #44 (`a474da5`). CI green on both (lint/verify/playwright/
       install-e2e on `ut-cloud`; build/contract/e2e/playwright on
       `universal-till`).
-- [ ] 🟡 **Resumable/checksummed downloads are mocked** — STILL OPEN, NOT
-      touched by the 2026-07-24 download-ack/revocations fix below (a
-      genuinely separate, larger feature — chunked transfer + per-chunk
-      checksum + resumable state, not a reachability fix).
-      `internal/downloads/resume_manager.go` (T031) is dead code with zero external
-      call sites; `ValidateChunkChecksum` always returns `true` regardless of input.
-      The live-routed endpoint (`internal/httpapi/handlers/downloads.go:185`) is
-      explicitly commented `// best-effort; resume is mocked` and always returns the
-      literal string `"download-chunk"` ignoring byte range/checksum; `/api/v1/
-      downloads/status` always returns a hardcoded "active" response. Source: FR-011,
-      SC-002 (99.5% resumable-download completion — unmeasurable, the path doesn't
-      exist).
+- [x] 🟡 **Resumable/checksummed downloads are mocked** — FIXED 2026-07-24
+      (`ut-cloud` PR #19), same session as the download-ack fix below.
+      Investigation found the gap description didn't match reality:
+      `internal/downloads/resume_manager.go` (T031) and its
+      `resumeCapability`/`resume` handlers were entirely **dead code** (zero
+      callers anywhere, confirmed across both this repo and
+      `universal-till`) — deleted rather than "implemented". The REAL gap
+      was the actually-used `artifact` endpoint never honoring HTTP `Range`
+      requests, even though `universal-till`'s real client
+      (`DownloadManager.downloadOnce`) already correctly sends `Range:
+      bytes=N-` on resume and gracefully falls back to a full re-download
+      when the server doesn't answer `206` — which is what always silently
+      happened. Added real `206`/`416` support via `gocloud.dev/blob`'s
+      range-read API. "Checksummed downloads are mocked" was never true for
+      the real path either — the till already does real whole-file SHA256
+      verification; that only described the dead `ValidateChunkChecksum`
+      stub nothing called. Also wired `/api/v1/downloads/status` to the
+      real (already-built, previously unwired) `GetDownloadStatus` instead
+      of a hardcoded "active". Independent review fixed: a stale k6
+      load-test script still calling the deleted endpoints, an
+      "expired→continue" status bug, error responses incorrectly
+      carrying a 5-minute Cache-Control. Review:
+      `ut-cloud/docs/code-reviews/2026-07-24-resumable-downloads.md`.
+      Source: FR-011, SC-002.
 - [x] 🟡 **Download ack doesn't close the loop** — FIXED 2026-07-24
       (`ut-cloud` PR #18). `AckDownload` now invalidates the token
       (single-use) after every outcome, records real metrics
