@@ -658,6 +658,31 @@ Designed in `architecture/consumer-app.md`, `item-discovery-and-universal-catalo
       instead of a second desktop OS. NOT started — needs scoping alongside the
       existing Android item (shared server core, per-platform shell + App Store
       distribution/signing questions unique to iOS).
+- [ ] 🟡 **Assisted POS migration (Excel/CSV import + remote-session onboarding)**
+      (Farshid 2026-07-24, relayed from a German shop-owner contact currently on an
+      incumbent POS with its own support company). Two distinct asks, both about
+      making the switch to Universal Till low-friction for a real shop mid-migration:
+      1. **Guided remote onboarding**: the incumbent's support model is a remote
+         session (Teams) with the owner granting permission, then the vendor's staff
+         does the migration + troubleshooting hands-on. Universal Till has no
+         equivalent white-glove path today — worth scoping a remote-assist flow
+         (screen-share/remote-support session gated on explicit owner consent) for
+         shops that don't want to self-serve the switch.
+      2. **Data import**: the incumbent system exports products/customers/sales data
+         as Excel. Need an importer (products, stock, customers, ideally sales
+         history) that reads that export shape — no format spec yet, needs a sample
+         export from the actual system to build against.
+      Related, same contact: their **existing table-management system + printer
+      hardware should "just work"** once they install the corresponding app from the
+      plugin store — reads as an ask for zero-config hardware detection for
+      table/printer plugins (USB/network auto-discovery, no manual driver setup),
+      not a specific integration request. NOT started — needs a real sample Excel
+      export and clarity on which incumbent system this is before scoping either
+      half. **Pricing context**: they currently pay ~€50/month for the incumbent
+      POS software, with card payment processing billed separately — a real
+      data point for our own pricing/packaging. See [[farshid-has-no-shop]] (this is exactly the kind of real external
+      shop-owner pull the project needs) and [[multilingual-everything]] (German
+      language plugin already exists — this contact is a live prospect for it).
 - [ ] 🟢 **Mobile light POS** (Android/iOS BYOD register, LAN-paired to primary till) —
       merchant-side companion; mostly independent (LAN pairing exists).
 - [ ] 🟢 **Storefront & hardware** — store.universaltill.com selling devices/parts;
