@@ -987,13 +987,21 @@ the gaps below are real. Not on the critical path — pick up opportunistically.
 ### 🔌 universal-till — spec 009-cloud-marketplace + 010-complete-pending-specs
 _(both specs describe the same underlying gaps — 010 was meant to close what 009 left
 open, and didn't)_
-- [ ] 🟡 **Dev-mode marketplace override has no validation/health-check/fallback** —
-      setting `DevOverrideURL` routes traffic there unconditionally;
-      `internal/plugins/marketplace/client.go` never checks `cfg.DevMode`, never
-      validates scheme/host/port, never health-checks reachability, and has no
-      fallback-to-cloud-on-timeout or self-signed-cert handling — the opposite of the
-      spec'd safety net for a dev-only escape hatch. Source: 009 FR-015 (US6) / 010
-      FR-004, FR-005 (T039-T041 unchecked, confirmed absent from code).
+- [x] 🟡 **Dev-mode marketplace override has no validation/health-check/fallback** —
+      FIXED 2026-07-24, `universal-till` PR #45 (`1eb8a29`). `client.go` now
+      validates the override URL is a real http(s) URL, health-checks
+      `GET /healthz` (bounded timeout) before ever activating it, falls back to
+      the real cloud endpoint if the check fails or an active override request
+      times out mid-flight (`doWithFallback`), and isolates TLS: a fully
+      separate `devClient`/`cloudClient` pair so a broken/self-signed dev
+      override can never silently disable TLS verification for real cloud
+      traffic (the bug the original naive implementation had — caught by
+      independent review before merge, along with a matching bug where a
+      self-signed HTTPS override could never pass its own health check because
+      the health-check client didn't share the override's TLS-bypass
+      transport). Review:
+      `universal-till/docs/code-reviews/2026-07-24-dev-mode-override-safety.md`.
+      Source: 009 FR-015 (US6) / 010 FR-004, FR-005 (T039-T041).
 - [x] 🟡 **No marketplace audit-trail UI page; no permission/manager-approval
       badges on the store page** — the audit-trail page is now FIXED (2026-07-24,
       `universal-till` PR #47); the store-page badges are the one small piece
@@ -1063,11 +1071,26 @@ open, and didn't)_
       with a single `ReportNow` sending a current-state snapshot, wired into the
       scheduler tick this entry correctly identified as a stub. Source: 009
       FR-013.
-- [ ] 🟢 **Hardware (process-based) plugins have no boot-time auto-start** —
-      `Supervisor.AutoStartPlugins()` (`internal/plugins/supervisor.go:292`, T023) is
-      fully implemented but never called outside tests; only WASM plugins auto-start
-      today (`Wasm.Sync()`). Doesn't affect any currently-shipped plugin (all WASM) but
-      would block a future process-based hardware plugin from starting on boot.
+- [x] 🟢 **Hardware (process-based) plugins have no boot-time auto-start** —
+      FIXED 2026-07-24, `universal-till` PR #49 (`b748441`). Deeper than
+      originally described: `Supervisor.AutoStartPlugins()`
+      (`internal/plugins/supervisor.go:292`, T023) wasn't just "never called
+      outside tests" — the `Supervisor` type was never constructed anywhere
+      in the production binary at all; `main.go` passed `nil` straight
+      through to `server.Start`. That silently broke a second thing too:
+      `RevocationChecker`'s stop-on-revoke path (`rc.supervisor.StopPlugin`)
+      is nil-guarded, so revoking a process-based plugin never actually
+      stopped its process. `main.go` now constructs a real `Supervisor`,
+      calls `AutoStartPlugins` at boot (non-fatal), and shuts it down
+      gracefully alongside the HTTP server. Independent review caught a
+      real (if low-severity, currently-theoretical) orphan-process risk in
+      the first pass — auto-start was called before a later
+      `log.Fatalf`-capable init step, and `os.Exit` skips deferred cleanup
+      — fixed by moving both calls to immediately before `server.Start`.
+      Still zero observable effect on the current fleet (all WASM;
+      `AutoStartPlugins` explicitly skips non-go/native runtimes) — this
+      closes the gap ahead of the first process-based plugin shipping.
+      Review: `universal-till/docs/code-reviews/2026-07-24-plugin-supervisor-boot-wiring.md`.
       Source: 007-plugin-host.
 - [x] 🟢 **`README.md` is badly stale, reads as pre-launch marketing template** —
       FIXED 2026-07-24, same session (`universal-till` PR #43). Roadmap rewritten
