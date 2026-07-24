@@ -845,14 +845,53 @@ the gaps below are real. Not on the critical path — pick up opportunistically.
       review caught 2 HIGH pre-merge: `ExecuteRollback` wasn't channel-scoped
       (could revoke an unrelated beta release on a stable rollback), and the
       rollback-execute endpoint only required vendor role, not staff.
-- [ ] 🟡 **Device telemetry ingestion never persists / no dashboards** —
-      `ReportPluginStatus` validates but never writes to DB (`// TODO: Persist
-      telemetry`); `GetDeviceTelemetry`/`GetMerchantTelemetry`/`GetPluginTelemetry`/
-      `DetectAnomalies` all return hardcoded placeholders; the REST handler
-      (`internal/api/telemetrysvc/handler.go`) doesn't even decode the request body.
-      Neither that handler package nor the gRPC `TelemetryService` is wired into
-      `cmd/cloud/main.go` — zero call sites outside their own package despite
-      T032/T034 marked done. Source: FR-014.
+- [x] 🟡 **Device telemetry ingestion never persists / no dashboards** — FIXED
+      2026-07-24 (persistence + real aggregation; dashboards explicitly NOT
+      done, see below). `ut-cloud`: new `device_telemetry` ent schema
+      (current-state snapshot, unique on device_id+plugin_id, upserted per
+      report); `internal/telemetry/service.go` rewritten to persist via ent
+      and to answer `GetDeviceTelemetry`/`GetMerchantTelemetry`/
+      `GetPluginTelemetry` with real queries instead of hardcoded
+      placeholders. Deleted the dead `internal/api/telemetrysvc/handler.go`
+      REST scaffold (wrong router framework — this codebase's real REST
+      surface is grpc-gateway, not a hand-rolled mux; it was never wired
+      into `cmd/cloud/main.go` and never could have been without a rewrite).
+      **Bigger discovery along the way**: `TelemetryService.ReportPluginStatus`
+      had no `google.api.http` annotation AND the raw gRPC port (9090) isn't
+      exposed by the k8s Service/Ingress (`homelab-k8s/kubernetes/apps/
+      unitill-cloud/{deployment,ingress}.yaml` — Service only maps
+      port 80→8081) — so this RPC was **unreachable by any real client**,
+      gRPC or REST, before this fix, independent of the persistence gap.
+      Fixed by adding an http annotation (`POST /v1/telemetry/report`),
+      exposing it through the same grpc-gateway HTTP bridge every other
+      device-facing RPC already uses — no k8s/infra changes needed. Also
+      found: `universal-till`'s `TelemetryClient` was sending a completely
+      different, invented JSON shape (`TelemetryEvent`/`TelemetryBatch`) to
+      a path (`/v1/telemetry`) that never existed server-side, on either the
+      old or new contract — three incompatible telemetry models existed
+      across the two repos before this fix, none of which agreed with each
+      other. Rewrote `TelemetryClient` to send the real
+      `ReportPluginStatusRequest` shape (`internal/plugins/telemetry_client.go`)
+      and wired it into the scheduler's telemetry tick
+      (`internal/server/server.go`, was a literal `(stub)` log line).
+      Proto contract version bumped to 0.0.4 (`VERSIONING.md`/
+      `COMPATIBILITY.md`), regenerated stubs diffed against the previous
+      committed versions to confirm additive-only changes. **Deliberately
+      NOT done**: `DetectAnomalies` (needs resource-usage metrics —
+      crash/memory/CPU — that were never part of the real wire contract;
+      the old `internal/telemetry/service.go` had aspirational Go structs
+      for these that no proto message ever carried, trimmed rather than
+      kept as unreachable dead fields); a portal dashboard page (this repo
+      has no server-rendered admin page for telemetry yet — the aggregation
+      queries exist and are tested, but nothing calls them from a UI);
+      raw compliance exports and the 18-month retention policy (FR-014/
+      FR-020). Reviews:
+      `ut-cloud/docs/code-reviews/2026-07-24-device-telemetry.md`,
+      `universal-till/docs/code-reviews/2026-07-24-telemetry-client-wiring.md`.
+      **New backlog item surfaced along the way** (see below): `AckDownload`
+      and `GetRevocations` on `DownloadService` have the exact same missing-
+      http-annotation gap — presumably equally unreachable today, not fixed
+      here (out of scope for a telemetry-focused change).
 - [ ] 🟡 **Resumable/checksummed downloads are mocked** —
       `internal/downloads/resume_manager.go` (T031) is dead code with zero external
       call sites; `ValidateChunkChecksum` always returns `true` regardless of input.
@@ -866,7 +905,16 @@ the gaps below are real. Not on the critical path — pick up opportunistically.
       (`internal/api/downloadsvc/service.go:304`) validates token/checksum but never
       records success metrics, never marks the release installed in telemetry, never
       invalidates the token (so tokens aren't enforced single-use), and
-      checksum-mismatch alerting is a TODO. Source: FR-012.
+      checksum-mismatch alerting is a TODO. Source: FR-012. **Also unreachable**
+      (found 2026-07-24 while fixing the telemetry item above): `AckDownload` and
+      `GetRevocations` have no `google.api.http` annotation in
+      `specs/001-plugin-marketplace/contracts/cloud.proto` — same gap
+      `ReportPluginStatus` had. The raw gRPC port isn't exposed outside the
+      cluster, so before wiring a REST route (same fix as the telemetry one:
+      add an http annotation, no k8s changes needed) these two RPCs are
+      likely uncallable by any real till today, independent of the logic
+      gaps above. Worth confirming and fixing alongside whichever of these
+      two items gets picked up next — small, same-pattern fix.
 - [x] 🟡 **`ListPlugins`'s `SnapshotVersion` isn't spec-compliant** — FIXED
       2026-07-21 (`ut-cloud` PR #16). New shared `globalCatalogVersion()`
       computes the true max `updated_at` across ALL `plugin_listings`/
