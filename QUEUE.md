@@ -990,12 +990,15 @@ open, and didn't)_
       manager-approval badges. Manager-PIN install gating itself does work
       (`authorizer.go` `requireManagerPIN`). Source: 009 FR-009 (US5) / 010 FR-006,
       FR-007, SC-002.
-- [ ] 🟡 **Plugin marketplace telemetry never actually sends** — `TelemetryClient`
-      (`internal/plugins/telemetry_client.go`) is fully built (Start/TrackInstall/
-      TrackUpdate/TrackStatusUpdate/TrackBrowse) but has zero call sites — never
-      instantiated. The scheduler's telemetry job is a literal stub:
-      `internal/server/server.go:76-89` logs `"[Scheduler] telemetry job triggered
-      (stub)"` with `// TODO: Implement telemetry reporting in T024`. Source: 009
+- [x] 🟡 **Plugin marketplace telemetry never actually sends** — FIXED 2026-07-24,
+      same session (`universal-till` PR #44, paired with `ut-cloud` PR #17 — see
+      the `ut-cloud — spec 001-plugin-marketplace` section above for the full
+      writeup). The `TelemetryClient` described here (`Start`/`TrackInstall`/
+      `TrackUpdate`/`TrackStatusUpdate`/`TrackBrowse`) no longer exists in that
+      form — it was rewritten entirely: those methods didn't match the real wire
+      contract (no event-batching concept in the actual proto) and were replaced
+      with a single `ReportNow` sending a current-state snapshot, wired into the
+      scheduler tick this entry correctly identified as a stub. Source: 009
       FR-013.
 - [ ] 🟢 **Hardware (process-based) plugins have no boot-time auto-start** —
       `Supervisor.AutoStartPlugins()` (`internal/plugins/supervisor.go:292`, T023) is
@@ -1003,20 +1006,22 @@ open, and didn't)_
       today (`Wasm.Sync()`). Doesn't affect any currently-shipped plugin (all WASM) but
       would block a future process-based hardware plugin from starting on boot.
       Source: 007-plugin-host.
-- [ ] 🟢 **`README.md` is badly stale, reads as pre-launch marketing template** —
-      Farshid flagged this 2026-07-24 (mid-session, not a standalone ask); a new
-      standing rule was added to `universal-till/CLAUDE.md` ("README.md is kept up
-      to date every time it goes stale") but the existing file itself wasn't rewritten
-      — genuinely large, separate task. Concrete stale claims found: "Currently
-      supported languages: English (en) - More coming soon!" (false — en/ar/fa/tr all
-      real, shipped, i18n-guard-enforced); "Current Focus (Q1 2025)" roadmap section
-      (everything else in the project is dated well into 2026); pricing table full of
-      `$??/mo` placeholders; Discord/Twitter/YouTube/Blog links and "amazing community
-      of contributors" copy that don't reflect a pre-launch, not-yet-public project
-      (see `farshid-has-no-shop` memory — the goal is onboarding real shop owners, this
-      isn't a live community yet). Needs a deliberate content pass, not a mechanical
-      edit — someone (Farshid or a future session) should decide what's actually true
-      to claim publicly before it's rewritten.
+- [x] 🟢 **`README.md` is badly stale, reads as pre-launch marketing template** —
+      FIXED 2026-07-24, same session (`universal-till` PR #43). Roadmap rewritten
+      against actual shipped state (was "Q1 2025", now reflects 2026 reality);
+      i18n section corrected (was "English only", now lists real en/ar/fa/tr +
+      de/es plugins); Plugin Development section's fictional separate-process
+      `plugin.Serve()`/`plugin-sdk` sample replaced with the real in-process WASM
+      description (ADR-0001); marketplace feature list split into "available now"
+      (verified against real `ut-plugin-*` repos) vs. aspirational categories.
+      Independent review caught the corrected README now contradicted
+      `docs/plugin_guidelines.md` (same fictional architecture, uncorrected) —
+      added a banner there pointing at real shipping plugins as the working
+      reference and fixed its Plugin Architecture/manifest.json section to the
+      real schema; full rewrite of that larger doc left out of scope. Pricing
+      table `$??/mo` placeholders and Discord/Twitter/YouTube/community copy
+      deliberately left untouched — those are business/marketing decisions for
+      Farshid, not stale technical claims a session should resolve unilaterally.
 
 ### ❓ ut-plugin-faq — spec 001-multilingual-faq-page
 - [x] 🟡 **FAQ keyword search never built** — FIXED 2026-07-22 (`universal-till`
