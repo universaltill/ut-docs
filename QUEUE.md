@@ -222,6 +222,26 @@ Two tracks run **independently** of that path and can happen anytime:
       search transliteration vs OS switching — **awaiting Farshid's pick** (recommend
       scanner normalization in core + transliteration as the plugin).
 - [ ] 🟡 **Windows regular-printing** — plain-text/CUPS-equivalent path on Windows.
+- [ ] 🟡 **Auto-update for the till app** (Farshid 2026-07-24) — a settings toggle to
+      enable/disable auto-update, plus a schedule (time-of-day, presumably to avoid
+      updating mid-trading-hours). No update mechanism for the till binary itself
+      exists today (checked: no `auto.update`/scheduled-update code in
+      `universal-till/internal/`) — this is about the **core app**, distinct from
+      the already-working plugin-update flow via the marketplace. NOT started —
+      needs scoping: how the binary gets replaced per platform (systemd service
+      restart on the `.deb` install path, in-place swap on Windows/macOS/manual
+      Linux), where the update artifact comes from (same release channel as
+      `github.com/universaltill/universal-till/releases`?), and how it interacts
+      with offline-first (must never block checkout, same bar as
+      [[offline-first]]-style constraints elsewhere in this repo).
+- [ ] 🟡 **Rollback the till app to a previous version** (Farshid 2026-07-24,
+      same conversation as the auto-update ask above — a shop that gets a bad
+      update needs a way back) — mirrors the plugin-side rollback that already
+      exists on the `ut-cloud` vendor console (list/details/rollback, FIXED
+      2026-07-20), but for the **core till binary itself**, not a plugin.
+      Depends on the auto-update mechanism above existing first (need a
+      released-versions history + a safe swap-back path per platform); scope
+      together.
 - [ ] 🟡 **(field)** **Settings page layout is broken** (Farshid 2026-07-20, two
       screenshots): several cards (Data Management/backup file table, "All
       settings" key/value table) overflow and get horizontal scrolling instead
