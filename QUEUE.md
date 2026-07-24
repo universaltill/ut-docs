@@ -994,14 +994,40 @@ open, and didn't)_
       fallback-to-cloud-on-timeout or self-signed-cert handling — the opposite of the
       spec'd safety net for a dev-only escape hatch. Source: 009 FR-015 (US6) / 010
       FR-004, FR-005 (T039-T041 unchecked, confirmed absent from code).
-- [ ] 🟡 **No marketplace audit trail/filter UI, no permission or telemetry-opt-in
-      badges** — `authorizer.go`'s `AuditLog()` only logs to stdout, never writes to
-      the `audit_log` table; no `AuditRepo` exists; no page renders/filters an audit
-      trail; `plugin_settings.html` has no telemetry opt-in toggle; `plugins_store.html`
-      shows trust badges (official/verified/unverified) but not permission/
-      manager-approval badges. Manager-PIN install gating itself does work
-      (`authorizer.go` `requireManagerPIN`). Source: 009 FR-009 (US5) / 010 FR-006,
-      FR-007, SC-002.
+- [ ] 🟡 **No marketplace audit-trail UI page; no permission/manager-approval
+      badges on the store page** — REVISED 2026-07-24, two corrections to how this
+      item was previously described:
+      1. **"Manager-PIN install gating itself does work" was false, now actually
+         fixed.** `authorizer.go`'s `Authorizer`/`requireManagerPIN` was entirely
+         dead code (zero callers anywhere) — every plugin install/uninstall/
+         enable/disable/update/rollback/permission-grant/revoke/trust-change/
+         upload/import endpoint had **no role check at all**, and a live-but-
+         separate second install path (`/api/plugins/store/*`, the actual button
+         on `/plugins/store`) would have stayed open even after gating the first
+         one — caught by independent review before merge. FIXED:
+         `universal-till` PR #46, `isManagerOrAuthOff` (the same gate already
+         used for printer/idle-lock/telemetry settings) now applied everywhere,
+         16 new tests. Review:
+         `universal-till/docs/code-reviews/2026-07-24-plugin-manager-gating.md`.
+      2. **"AuditLog() only logs to stdout, no AuditRepo exists" was also
+         false.** That described the same dead `authorizer.go` stub. The REAL
+         audit system — `data.POSRepo.InsertAudit` / `data.PluginRepo.InsertAudit`
+         /`InsertAuditRaw`, writing to the real `audit_log` table — already exists
+         and is comprehensively wired: plugin install/uninstall/trust-change
+         (`internal/plugins/install.go`), permission grant/revoke
+         (`permissions.go`), rollback (`rollback.go`), plus dozens of other
+         actions app-wide (sales, shifts, users, settings, sync, etc.). **Still
+         genuinely missing**: an admin-facing UI page to browse/filter that
+         table — the persistence layer was never the gap, only the viewer.
+      **Still open**: the audit-trail browse/filter page itself;
+      `plugin_settings.html` telemetry opt-in toggle (note: a *different*,
+      till-core telemetry opt-in toggle was added 2026-07-24 in
+      `web/ui/pages/settings.html` as part of the device-telemetry fix — this
+      item is specifically about a marketplace-side badge/toggle, if that's
+      still a distinct need, worth re-checking before starting); `plugins_store
+      .html` permission/manager-approval badges (trust badges — official/
+      verified/unverified — already exist). Source: 009 FR-009 (US5) / 010
+      FR-006, FR-007, SC-002.
 - [x] 🟡 **Plugin marketplace telemetry never actually sends** — FIXED 2026-07-24,
       same session (`universal-till` PR #44, paired with `ut-cloud` PR #17 — see
       the `ut-cloud — spec 001-plugin-marketplace` section above for the full
