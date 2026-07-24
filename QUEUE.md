@@ -909,7 +909,10 @@ the gaps below are real. Not on the critical path — pick up opportunistically.
       PR #44 (`a474da5`). CI green on both (lint/verify/playwright/
       install-e2e on `ut-cloud`; build/contract/e2e/playwright on
       `universal-till`).
-- [ ] 🟡 **Resumable/checksummed downloads are mocked** —
+- [ ] 🟡 **Resumable/checksummed downloads are mocked** — STILL OPEN, NOT
+      touched by the 2026-07-24 download-ack/revocations fix below (a
+      genuinely separate, larger feature — chunked transfer + per-chunk
+      checksum + resumable state, not a reachability fix).
       `internal/downloads/resume_manager.go` (T031) is dead code with zero external
       call sites; `ValidateChunkChecksum` always returns `true` regardless of input.
       The live-routed endpoint (`internal/httpapi/handlers/downloads.go:185`) is
@@ -918,20 +921,44 @@ the gaps below are real. Not on the critical path — pick up opportunistically.
       downloads/status` always returns a hardcoded "active" response. Source: FR-011,
       SC-002 (99.5% resumable-download completion — unmeasurable, the path doesn't
       exist).
-- [ ] 🟡 **Download ack doesn't close the loop** — `AckDownload`
-      (`internal/api/downloadsvc/service.go:304`) validates token/checksum but never
-      records success metrics, never marks the release installed in telemetry, never
-      invalidates the token (so tokens aren't enforced single-use), and
-      checksum-mismatch alerting is a TODO. Source: FR-012. **Also unreachable**
-      (found 2026-07-24 while fixing the telemetry item above): `AckDownload` and
-      `GetRevocations` have no `google.api.http` annotation in
-      `specs/001-plugin-marketplace/contracts/cloud.proto` — same gap
-      `ReportPluginStatus` had. The raw gRPC port isn't exposed outside the
-      cluster, so before wiring a REST route (same fix as the telemetry one:
-      add an http annotation, no k8s changes needed) these two RPCs are
-      likely uncallable by any real till today, independent of the logic
-      gaps above. Worth confirming and fixing alongside whichever of these
-      two items gets picked up next — small, same-pattern fix.
+- [x] 🟡 **Download ack doesn't close the loop** — FIXED 2026-07-24
+      (`ut-cloud` PR #18). `AckDownload` now invalidates the token
+      (single-use) after every outcome, records real metrics
+      (`RecordDownloadAck`/`RecordDownloadCompletion`), and the
+      checksum-mismatch path is documented as needing a real ops/paging
+      channel that doesn't exist yet (left as a gap, not built here — the
+      existing `notify.Mailer` is owner-facing, not operational).
+      **Also confirmed and fixed the reachability gap flagged same-day**:
+      `AckDownload` and `GetRevocations` had no `google.api.http`
+      annotation — same pattern as `ReportPluginStatus`'s telemetry fix.
+      `GetRevocations` also went from a hardcoded empty list to real data
+      (queries `PluginRelease` where `status="revoked"`) — **the till's
+      revocation kill-switch has been silently 404ing every 30 minutes in
+      any real deployment** until this fix, since `RevocationChecker` (in
+      `universal-till`, already wired into the scheduler) calls this exact
+      path and nothing on the server side ever answered it. Real bug also
+      fixed along the way: the `AckDownload` gRPC adapter fed a plugin ID
+      into a device-ID check that could never pass (the wire message has
+      no `device_id` field at all) — every real ack would have failed that
+      check; removed rather than papered over. Self-caught bug during
+      test-writing: the revocation version cursor's `.Unix()` encoding
+      (matching `catalog.globalCatalogVersion`'s convention) truncated
+      sub-second precision and would have re-delivered the same revocation
+      forever — switched to `UnixNano` for this cursor specifically.
+      Independent review added: adapter-level test coverage (the gRPC layer
+      had none, which is exactly where the device-ID bug lived), a fix for
+      a misleading metric doc comment, and documented that ack is no longer
+      idempotent (a lost success response + naive retry now errors instead
+      of no-op — acceptable since no till-side ack caller retries at the
+      transport level today). Review:
+      `ut-cloud/docs/code-reviews/2026-07-24-download-ack-and-revocations.md`.
+      **Deliberately deferred**: a real till-side `AckDownload` caller
+      (`universal-till`'s `Client.AckDownload` is now reachable but still
+      has zero call sites — needs tracing the actual download-and-install
+      flow first); the duplicate revocation-fetching code in
+      `universal-till` (`RevocationChecker` and the unused
+      `marketplace.Client.GetRevocations` both independently hit the same
+      path — flagged, not refactored).
 - [x] 🟡 **`ListPlugins`'s `SnapshotVersion` isn't spec-compliant** — FIXED
       2026-07-21 (`ut-cloud` PR #16). New shared `globalCatalogVersion()`
       computes the true max `updated_at` across ALL `plugin_listings`/
