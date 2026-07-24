@@ -892,6 +892,23 @@ the gaps below are real. Not on the critical path — pick up opportunistically.
       and `GetRevocations` on `DownloadService` have the exact same missing-
       http-annotation gap — presumably equally unreachable today, not fixed
       here (out of scope for a telemetry-focused change).
+      **Independent (opus-model) review caught a genuinely blocking gap
+      before merge**: nothing anywhere in `universal-till` ever wrote
+      `marketplace.telemetry_opt_in` to `true` — no settings UI existed, so
+      the whole pipeline, however correct end-to-end, could never actually
+      fire on a real till. Fixed: manager-gated toggle added to the Settings
+      page, i18n keys in all 4 core locales. Also fixed: an unenrolled till
+      sending an empty `merchant_id` would get every report rejected
+      (till now skips quietly until `enroll.Init`'s lazy ADR-0013 enrolment
+      fills it in); a schema/validation contradiction on `merchant_id`
+      (`.Optional()` vs. hard-rejected — now genuinely required); a dead
+      per-plugin `ErrorRate` in `GetMerchantTelemetry` that was hardcoded to
+      `0`; a misleading hardcoded coverage metric; and the previously
+      completely-dead `FailureThrottle` now gets a real (if minimal) call.
+      **Both merged**: `ut-cloud` PR #17 (`f8eccac`), `universal-till`
+      PR #44 (`a474da5`). CI green on both (lint/verify/playwright/
+      install-e2e on `ut-cloud`; build/contract/e2e/playwright on
+      `universal-till`).
 - [ ] 🟡 **Resumable/checksummed downloads are mocked** —
       `internal/downloads/resume_manager.go` (T031) is dead code with zero external
       call sites; `ValidateChunkChecksum` always returns `true` regardless of input.
