@@ -1030,10 +1030,23 @@ open, and didn't)_
          own end day — "Until: today" would have shown nothing from today;
          fixed with a bare-date-to-end-of-day normalizer, regression tested.
          Review: `universal-till/docs/code-reviews/2026-07-24-audit-trail-page.md`.
-      **Still open** (small, cosmetic): `plugins_store.html` permission/
-      manager-approval badges (trust badges — official/verified/unverified —
-      already exist; this is a distinct badge for permission scope/manager-
-      approval status, not yet built). The `plugin_settings.html` telemetry
+      4. **The store-page badges are now built too — item fully closed.**
+         FIXED 2026-07-24: `ut-cloud` PR #20 added `PluginSummary.permissions`
+         (contract 0.0.6, additive) — a plugin's manifest-declared capability
+         scopes (e.g. `net:api.stripe.com`, `storage`), extracted server-side
+         via `pkg/manifest.Parse` and exposed on both the live `ListPlugins`
+         path and the offline snapshot. `universal-till` PR #48 wires it
+         through `storeItem.Permissions` and renders each scope as a badge on
+         `plugins_store.html`, plus a static manager-approval notice on every
+         not-yet-installed card (static rather than per-plugin conditional,
+         since PR #46 already blanket-gates every store mutation). Independent
+         review verified the manager-approval claim against the actual route
+         handlers (all three gated), confirmed RTL-safety, and confirmed no
+         XSS risk from rendering manifest-declared strings (plain
+         `html/template` auto-escaping, no `template.HTML` cast). Reviews:
+         `ut-cloud/docs/code-reviews/2026-07-24-permission-badges-contract.md`,
+         `universal-till/docs/code-reviews/2026-07-24-plugin-store-permission-badges.md`.
+      The `plugin_settings.html` telemetry
       opt-in toggle this item also originally mentioned is superseded — a
       till-core telemetry opt-in toggle was added 2026-07-24 in
       `web/ui/pages/settings.html` as part of the device-telemetry fix; if a
