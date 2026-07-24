@@ -693,9 +693,18 @@ Designed in `architecture/consumer-app.md`, `item-discovery-and-universal-catalo
       export and clarity on which incumbent system this is before scoping either
       half. **Pricing context**: they currently pay ~€50/month for the incumbent
       POS software, with card payment processing billed separately — a real
-      data point for our own pricing/packaging. See [[farshid-has-no-shop]] (this is exactly the kind of real external
-      shop-owner pull the project needs) and [[multilingual-everything]] (German
-      language plugin already exists — this contact is a live prospect for it).
+      data point for our own pricing/packaging. **Also flagged**: at end of day
+      their current system automatically sends transactions to the tax office —
+      almost certainly Germany's **KassenSichV/TSE** fiscalization requirement
+      (certified Technical Security Equipment signing every transaction) and/or
+      **DSFinV-K** export for tax audits, not a generic nice-to-have — likely a
+      **legal requirement to sell POS software in Germany at all**, not a
+      feature request. Needs real research into TSE certification before any
+      scoping; this could gate the whole German market, not just this one
+      prospect. See [[farshid-has-no-shop]] (this is exactly the kind of real
+      external shop-owner pull the project needs) and
+      [[multilingual-everything]] (German language plugin already exists —
+      this contact is a live prospect for it).
 - [ ] 🟢 **Mobile light POS** (Android/iOS BYOD register, LAN-paired to primary till) —
       merchant-side companion; mostly independent (LAN pairing exists).
 - [ ] 🟢 **Storefront & hardware** — store.universaltill.com selling devices/parts;
